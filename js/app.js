@@ -42,19 +42,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ---- 页面导航 ----
 function setupNavigation() {
-    const tabs = document.querySelectorAll('.nav-item');
-    tabs.forEach(tab => {
+    document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(tab => {
         tab.addEventListener('click', () => {
-            const page = tab.dataset.page;
-            switchPage(page);
+            if (tab.dataset.page) switchPage(tab.dataset.page);
         });
     });
 }
 
 function switchPage(pageName) {
-    // 更新导航高亮
+    // 更新侧边栏高亮
     document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
-    document.querySelector(`.nav-item[data-page="${pageName}"]`).classList.add('active');
+    const sidebarItem = document.querySelector(`.nav-item[data-page="${pageName}"]`);
+    if (sidebarItem) sidebarItem.classList.add('active');
+
+    // 更新底部导航高亮
+    document.querySelectorAll('.mobile-nav-item').forEach(t => t.classList.remove('active'));
+    const mobileItem = document.querySelector(`.mobile-nav-item[data-page="${pageName}"]`);
+    if (mobileItem) mobileItem.classList.add('active');
 
     // 切换页面
     document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));

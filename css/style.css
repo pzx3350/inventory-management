@@ -771,18 +771,57 @@ tbody tr:hover { background: var(--bg-hover); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* ---- 响应式 ---- */
-@media (max-width: 640px) {
-    .sidebar { width: var(--sidebar-w-collapsed); }
-    .sidebar .logo-title { display: none; }
-    .sidebar .sidebar-logo { padding: 20px 0 16px; justify-content: center; }
-    .sidebar .nav-item { justify-content: center; padding: 13px 0; gap: 0; }
-    .sidebar .nav-item .nav-label { opacity: 0; width: 0; overflow: hidden; }
-    .sidebar .sidebar-settings-btn { justify-content: center; padding: 13px 0; gap: 0; }
-    .sidebar .sidebar-settings-btn .nav-label { opacity: 0; width: 0; overflow: hidden; }
-    .content-shell { padding: 16px; }
+/* ---- 底部导航栏（手机端） ---- */
+.mobile-nav { display: none; }
+
+@media (max-width: 768px) {
+    /* 隐藏侧边栏，改用底部导航 */
+    .sidebar { display: none; }
+
+    /* 显示底部导航 */
+    .mobile-nav {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        background: var(--sidebar-bg);
+        border-top: 1px solid var(--sidebar-border);
+        z-index: 200;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 4px 8px;
+        color: var(--sidebar-muted);
+        font-size: 11px;
+        font-weight: 500;
+        background: none;
+        border: none;
+        cursor: pointer;
+        transition: color var(--transition);
+        font-family: inherit;
+    }
+
+    .mobile-nav-item svg {
+        width: 22px; height: 22px;
+        stroke: currentColor; fill: none;
+        stroke-width: 1.85; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .mobile-nav-item.active { color: var(--sidebar-text); }
+
+    /* 主内容区底部留出导航栏高度 */
+    .content-shell {
+        padding: 16px 16px calc(64px + env(safe-area-inset-bottom, 0px));
+    }
+
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .card { padding: 16px; }
     .upload-zone { padding: 32px 16px; }
     thead th, tbody td { padding: 10px 12px; }
+    .dialog-content { max-height: 90vh; }
 }
