@@ -53,6 +53,11 @@ async function parseInventoryExcel(file) {
                     const row = jsonData[i];
                     if (!row || !row[colMap.code]) continue; // 跳过空行
 
+                    // 跳过汇总行（合计、小计、总计等）
+                    const codeStr = String(row[colMap.code] || '');
+                    const nameStr = String(row[colMap.name] || '');
+                    if (/合计|小计|总计|汇总/.test(codeStr) || /合计|小计|总计|汇总/.test(nameStr)) continue;
+
                     if (!period && row[colMap.period]) {
                         period = String(row[colMap.period]);
                     }
