@@ -145,12 +145,6 @@ function processInventory(inventoryData, rulesData) {
                 continue;
             }
 
-            // 待处理数据>0 但结存为负 → 询问
-            if (jiecun < 0) {
-                inquiries.push({ ...item, reason: '结存为负', diff: pendingData });
-                continue;
-            }
-
             // 收集有系数的档口
             const activeCats = [];
             for (const cat of CATEGORIES) {
@@ -210,8 +204,8 @@ function processInventory(inventoryData, rulesData) {
                 continue;
             }
 
-            // 结存为负 → 询问（不论 pendingData 正负）
-            if (jiecun < 0) {
+            // 结存为负且 pendingData <= 0 → 询问
+            if (jiecun < 0 && pendingData <= 0) {
                 inquiries.push({ ...item, reason: '03前缀结存为负', diff: pendingData });
                 continue;
             }
