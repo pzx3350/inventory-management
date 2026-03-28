@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ---- 页面导航 ----
 function setupNavigation() {
-    const tabs = document.querySelectorAll('.nav-tab');
+    const tabs = document.querySelectorAll('.nav-item');
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             const page = tab.dataset.page;
@@ -52,9 +52,9 @@ function setupNavigation() {
 }
 
 function switchPage(pageName) {
-    // 更新 tab 高亮
-    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-    document.querySelector(`[data-page="${pageName}"]`).classList.add('active');
+    // 更新导航高亮
+    document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.nav-item[data-page="${pageName}"]`).classList.add('active');
 
     // 切换页面
     document.querySelectorAll('.page-section').forEach(p => p.classList.remove('active'));
@@ -271,38 +271,14 @@ function renderDiankvList(data) {
         filtered = data.filter(d => d.diankv !== null && d.diankv !== undefined);
     }
 
-    // 搜索过滤
-    const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+    // 搜索过滤（支持汉字、全拼、首字母）
+    const searchTerm = document.getElementById('searchInput').value.trim();
     if (searchTerm) {
         filtered = filtered.filter(d =>
-            d.material_name.toLowerCase().includes(searchTerm) ||
-            d.material_code.toLowerCase().includes(searchTerm)
+            fuzzyMatch(d.material_name, searchTerm) ||
+            d.material_code.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }
-
-    // 按物料代码前缀分组
-    const groups = {};
-    filtered.forEach(item => {
-        const prefix = getCodePrefix(item.material_code);
-        let groupName;
-        if (prefix === '01_02') {
-            // 更细的分组
-            if (item.material_code.startsWith('01.01')) groupName = '肉类';
-            else if (item.material_code.startsWith('01.02')) groupName = '蔬菜';
-            else if (item.material_code.startsWith('01.03')) groupName = '调料';
-            else if (item.material_code.startsWith('02.')) groupName = '02类物料';
-            else groupName = '01类其他';
-        } else if (prefix === '03') {
-            groupName = '03类物料';
-        } else if (prefix === '04') {
-            groupName = '04类物料';
-        } else {
-            groupName = '其他';
-        }
-
-        if (!groups[groupName]) groups[groupName] = [];
-        groups[groupName].push(item);
-    });
 
     // 更新进度
     const total = data.length;
@@ -311,35 +287,22 @@ function renderDiankvList(data) {
     document.getElementById('diankvProgress').textContent = `已录入 ${recorded} / ${total}`;
     document.getElementById('diankvProgressFill').style.width = `${progress}%`;
 
-    // 渲染列表
+    // 渲染平铺列表
     let html = '';
-    for (const [groupName, items] of Object.entries(groups)) {
-        const groupRecorded = items.filter(i => i.diankv !== null && i.diankv !== undefined).length;
+    filtered.forEach(item => {
+        const hasDiankv = item.diankv !== null && item.diankv !== undefined;
         html += `
-            <div class="material-group-header" onclick="toggleGroup(this)">
-                <span>▸ ${groupName}</span>
-                <span class="count">${groupRecorded}/${items.length}</span>
-            </div>
-            <div class="material-group-items" style="display: none;">
-        `;
-
-        items.forEach(item => {
-            const hasDiankv = item.diankv !== null && item.diankv !== undefined;
-            html += `
-                <div class="material-item" onclick="openDiankvModal('${item.material_code}')">
-                    <div class="material-info">
-                        <div class="material-name">${item.material_name}</div>
-                        <div class="material-meta">${item.material_code} · ${item.unit} · 结存: ${item.jiecun ?? 0}</div>
-                    </div>
-                    <div class="material-diankv ${hasDiankv ? 'recorded' : 'empty'}">
-                        ${hasDiankv ? item.diankv : '未录入'}
-                    </div>
+            <div class="material-item" onclick="openDiankvModal('${item.material_code}')">
+                <div class="material-info">
+                    <div class="material-name">${item.material_name}</div>
+                    <div class="material-meta">${item.material_code} · ${item.unit} · 结存: ${item.jiecun ?? 0}</div>
                 </div>
-            `;
-        });
-
-        html += '</div>';
-    }
+                <div class="material-diankv ${hasDiankv ? 'recorded' : 'empty'}">
+                    ${hasDiankv ? item.diankv : '未录入'}
+                </div>
+            </div>
+        `;
+    });
 
     container.innerHTML = html;
 }
@@ -613,8 +576,8 @@ function renderRulesTable() {
     let filtered = rulesCache;
     if (searchTerm) {
         filtered = rulesCache.filter(r =>
-            r.material_name.toLowerCase().includes(searchTerm) ||
-            r.material_code.toLowerCase().includes(searchTerm)
+            fuzzyMatch(r.material_name, searchTerm) ||
+            r.material_code.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }
 
@@ -846,3 +809,30 @@ document.addEventListener('keydown', (e) => {
         closeRuleDialog();
     }
 });
+
+// ---- 侧边栏折叠 ----
+window._toggleSidebar = function() {
+    const sidebar = document.getElementById('sidebar');
+    const isCollapsed = sidebar.classList.toggle('collapsed');
+    localStorage.setItem('sidebar_collapsed', isCollapsed ? '1' : '0');
+};
+
+// ---- 主题切换 ----
+window._toggleTheme = function() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+};
+
+// ---- 恢复侧边栏和主题状态 ----
+(function() {
+    if (localStorage.getItem('sidebar_collapsed') === '1') {
+        document.getElementById('sidebar').classList.add('collapsed');
+    }
+    if (window.innerWidth <= 640) {
+        document.getElementById('sidebar').classList.add('collapsed');
+    }
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+    }
+})();

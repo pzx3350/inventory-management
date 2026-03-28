@@ -85,13 +85,8 @@ function processInventory(inventoryData, rulesData) {
         const name = item.material_name;
         const unit = item.unit;
         const jiecun = item.jiecun ?? 0;
-        const diankv = item.diankv;
-
-        // 点库未录入 → 跳过
-        if (diankv === null || diankv === undefined) {
-            skipped.push({ ...item, reason: '点库未录入' });
-            continue;
-        }
+        // 点库未录入 → 视为 0
+        const diankv = item.diankv ?? 0;
 
         const prefix = getCodePrefix(code);
         const rule = rulesMap.get(code);
@@ -147,6 +142,12 @@ function processInventory(inventoryData, rulesData) {
                 } else {
                     skipped.push({ ...item, reason: '无需处理（结存≤点库）' });
                 }
+                continue;
+            }
+
+            // 待处理数据>0 但结存为负 → 询问
+            if (jiecun < 0) {
+                inquiries.push({ ...item, reason: '结存为负', diff: pendingData });
                 continue;
             }
 
@@ -209,8 +210,8 @@ function processInventory(inventoryData, rulesData) {
                 continue;
             }
 
-            // 结存为负且 pendingData <= 0 → 询问
-            if (jiecun < 0 && pendingData <= 0) {
+            // 结存为负 → 询问（不论 pendingData 正负）
+            if (jiecun < 0) {
                 inquiries.push({ ...item, reason: '03前缀结存为负', diff: pendingData });
                 continue;
             }
@@ -245,7 +246,7 @@ function processInventory(inventoryData, rulesData) {
         skipped: skipped.length
     };
 
-    for (const [key, arr] of Object.entries(reports)) {
+    for (const arr of Object.values(reports)) {
         summary.processed += arr.length;
     }
 
