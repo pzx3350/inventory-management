@@ -244,6 +244,26 @@ async function refreshOverview() {
     document.getElementById('overviewCard').style.display = 'block';
 }
 
+// ---- 物料分组 ----
+function normCode(code) {
+    // 将物料代码每段补齐到3位，总共补到5段，用于范围比较
+    const segs = code.split('.');
+    while (segs.length < 5) segs.push('0');
+    return segs.map(s => s.padStart(3, '0')).join('.');
+}
+
+function getMaterialGroup(code) {
+    const n = normCode(code);
+    if (n >= normCode('01.03.01.01.001') && n <= normCode('01.03.03.009')) return '调料';
+    if (n >= normCode('03.01.01.01.001') && n <= normCode('03.01.01.02.018')) return '干料';
+    if ((n >= normCode('03.04.001') && n <= normCode('03.05.332')) ||
+        (n >= normCode('03.07.019') && n <= normCode('03.07.021'))) return '咸菜';
+    if (code.startsWith('04.')) return '库存商品';
+    return '其他';
+}
+
+const GROUP_ORDER = ['调料', '干料', '咸菜', '库存商品', '其他'];
+
 // ---- 点库列表 ----
 async function loadDiankvList() {
     if (!currentPeriod) return;
@@ -291,21 +311,41 @@ function renderDiankvList(data) {
     document.getElementById('diankvProgress').textContent = `已录入 ${recorded} / ${total}`;
     document.getElementById('diankvProgressFill').style.width = `${progress}%`;
 
-    // 渲染平铺列表
-    let html = '';
+    // 按分组渲染
+    const groups = {};
+    GROUP_ORDER.forEach(g => groups[g] = []);
     filtered.forEach(item => {
-        const hasDiankv = item.diankv !== null && item.diankv !== undefined;
+        const g = getMaterialGroup(item.material_code);
+        groups[g].push(item);
+    });
+
+    let html = '';
+    GROUP_ORDER.forEach(groupName => {
+        const items = groups[groupName];
+        if (items.length === 0) return;
+        const doneCount = items.filter(i => i.diankv !== null && i.diankv !== undefined).length;
         html += `
-            <div class="material-item" onclick="openDiankvModal('${item.material_code}')">
-                <div class="material-info">
-                    <div class="material-name">${item.material_name}</div>
-                    <div class="material-meta">${item.material_code} · ${item.unit} · 结存: ${item.jiecun ?? 0}</div>
-                </div>
-                <div class="material-diankv ${hasDiankv ? 'recorded' : 'empty'}">
-                    ${hasDiankv ? item.diankv : '未录入'}
-                </div>
+            <div class="material-group-header" onclick="toggleGroup(this)">
+                <span>▾ ${groupName}</span>
+                <span class="count">${doneCount}/${items.length}</span>
             </div>
+            <div class="group-items">
         `;
+        items.forEach(item => {
+            const hasDiankv = item.diankv !== null && item.diankv !== undefined;
+            html += `
+                <div class="material-item" onclick="openDiankvModal('${item.material_code}')">
+                    <div class="material-info">
+                        <div class="material-name">${item.material_name}</div>
+                        <div class="material-meta">${item.material_code} · ${item.unit} · 结存: ${item.jiecun ?? 0}</div>
+                    </div>
+                    <div class="material-diankv ${hasDiankv ? 'recorded' : 'empty'}">
+                        ${hasDiankv ? item.diankv : '未录入'}
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
     });
 
     container.innerHTML = html;
