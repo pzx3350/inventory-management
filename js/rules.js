@@ -25,6 +25,18 @@ const PREFIX_03_MAP = {
 };
 
 /**
+ * 判断是否为特殊双向号段（03.05.301 ~ 03.05.332）
+ * 点库>结存 → 走入库规则；点库<结存 → 走领料规则
+ */
+function isSpecialRange(code) {
+    if (!code.startsWith('03.05.')) return false;
+    const segs = code.split('.');
+    if (segs.length < 3) return false;
+    const third = parseInt(segs[2], 10);
+    return third >= 301 && third <= 332;
+}
+
+/**
  * 判断物料代码的前缀归属
  * @param {string} code
  * @returns {'01_02'|'03'|'04'|'unknown'}
@@ -193,13 +205,74 @@ function processInventory(inventoryData, rulesData) {
 
         // ---- 03. 前缀处理 ----
         if (prefix === '03') {
-            const pendingData = diankv - jiecun; // 注意方向：点库 - 结存
+            const pendingData = diankv - jiecun; // 点库 - 结存
 
-            // 不需要规则库，按代码前缀判断档口
+            // ---- 特殊双向号段（03.05.301 ~ 03.05.332）----
+            if (isSpecialRange(code)) {
+                if (pendingData === 0) {
+                    skipped.push({ ...item, reason: '特殊号段无差异' });
+                    continue;
+                }
+
+                if (pendingData > 0) {
+                    // 点库 > 结存 → 走正常 03. 入库规则
+                    const category = match03Category(code);
+                    if (!category) {
+                        inquiries.push({ ...item, reason: '特殊号段：档口未定义', diff: pendingData });
+                        continue;
+                    }
+                    const divider = unit === '斤' ? 2 : 1;
+                    reports[`${CATEGORY_NAMES[category]}入库单`].push({
+                        material_name: name,
+                        value: pendingData / divider
+                    });
+                } else {
+                    // 点库 < 结存 → 走 01./02. 领料规则
+                    const lpData = jiecun - diankv; // 正数
+                    const rule = rulesMap.get(code);
+                    if (!rule) {
+                        noRule.push({ ...item, reason: '特殊号段：未找到领料规则' });
+                        continue;
+                    }
+                    if (rule.attribute === '不动') {
+                        skipped.push({ ...item, reason: '特殊号段：规则属性为不动' });
+                        continue;
+                    }
+                    if (rule.attribute === '询问') {
+                        inquiries.push({ ...item, reason: '特殊号段：规则属性为询问', diff: -lpData });
+                        continue;
+                    }
+                    const activeCats = [];
+                    for (const cat of CATEGORIES) {
+                        const ratio = rule[cat];
+                        if (ratio && ratio > 0) activeCats.push({ key: cat, ratio });
+                    }
+                    if (activeCats.length === 0) {
+                        inquiries.push({ ...item, reason: '特殊号段：有规则但无系数', diff: -lpData });
+                        continue;
+                    }
+                    const divider = unit === '斤' ? 2 : 1;
+                    let remaining = lpData;
+                    for (let i = 0; i < activeCats.length; i++) {
+                        const { key, ratio } = activeCats[i];
+                        let value = i < activeCats.length - 1 ? Math.round(lpData * ratio) : remaining;
+                        remaining -= value;
+                        const finalValue = value / divider;
+                        if (finalValue !== 0) {
+                            reports[`${CATEGORY_NAMES[key]}领料单`].push({
+                                material_name: name,
+                                value: finalValue
+                            });
+                        }
+                    }
+                }
+                continue;
+            }
+
+            // ---- 正常 03. 处理 ----
             const category = match03Category(code);
 
             if (!category) {
-                // 找不到对应的档口规则
                 inquiries.push({ ...item, reason: '03前缀但档口未定义', diff: pendingData });
                 continue;
             }
