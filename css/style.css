@@ -824,4 +824,12 @@ tbody tr:hover { background: var(--bg-hover); }
     .upload-zone { padding: 32px 16px; }
     thead th, tbody td { padding: 10px 12px; }
     .dialog-content { max-height: 90vh; }
+
+    /* 弹窗底部留出导航栏高度，防止按钮被遮挡 */
+    .modal-overlay.open {
+        padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    }
+    .dialog-overlay.open {
+        padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    }
 }
