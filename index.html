@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>月底库存管理</title>
+    <meta name="description" content="月底库存盘点管理工具 - 上传Excel、手机点库、差异报表">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a class="navbar-brand" href="#">
+                <span class="icon">📦</span>
+                月底库存管理
+            </a>
+            <div class="nav-tabs" id="navTabs">
+                <button class="nav-tab active" data-page="upload" id="tab-upload">📤 上传</button>
+                <button class="nav-tab" data-page="diankv" id="tab-diankv">📱 点库</button>
+                <button class="nav-tab" data-page="report" id="tab-report">📊 报表</button>
+                <button class="nav-tab" data-page="rules" id="tab-rules">⚙️ 规则</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toast 通知容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- ==================== 页面1：上传 ==================== -->
+    <div class="page-section active" id="page-upload">
+        <div class="container">
+            <div style="padding-top: 24px;">
+                <!-- 期间选择 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📅 当前期间</div>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <select class="form-select" id="periodSelect" style="max-width: 200px;">
+                            <option value="">请先上传 Excel</option>
+                        </select>
+                        <span class="card-subtitle" id="periodInfo">上传 Excel 后自动识别期间</span>
+                    </div>
+                </div>
+
+                <!-- 上传区域 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📤 上传存货收发存汇总表</div>
+                        <div class="card-subtitle">支持 .xlsx 格式</div>
+                    </div>
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">点击或拖拽文件到此处上传</div>
+                        <div class="upload-hint">首次上传初始化数据，再次上传更新结存</div>
+                        <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+                    </div>
+                    <div id="uploadResult" style="margin-top: 16px;"></div>
+                </div>
+
+                <!-- 库存概览 -->
+                <div class="card" id="overviewCard" style="display: none;">
+                    <div class="card-header">
+                        <div class="card-title">📋 库存概览</div>
+                        <button class="btn btn-sm btn-secondary" onclick="refreshOverview()">🔄 刷新</button>
+                    </div>
+                    <div class="stats-grid" id="statsGrid"></div>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <div class="card-subtitle" id="progressText" style="text-align: center;">点库进度：0 / 0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 页面2：点库（手机端） ==================== -->
+    <div class="page-section" id="page-diankv">
+        <div class="container container-mobile">
+            <div style="padding-top: 16px;">
+                <!-- 搜索 -->
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" placeholder="搜索物料名称或代码...">
+                </div>
+
+                <!-- 进度 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span class="card-subtitle" id="diankvProgress">已录入 0 / 0</span>
+                    <span class="badge badge-info" id="diankvFilter" style="cursor:pointer;" onclick="toggleDiankvFilter()">全部</span>
+                </div>
+                <div class="progress-bar" style="margin-bottom: 16px;">
+                    <div class="progress-bar-fill" id="diankvProgressFill" style="width: 0%"></div>
+                </div>
+
+                <!-- 物料列表 -->
+                <div class="material-list" id="materialList">
+                    <div class="empty-state">
+                        <div class="empty-icon">📦</div>
+                        <div class="empty-title">暂无数据</div>
+                        <div class="empty-desc">请先在电脑端上传 Excel 文件</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 点库输入弹窗 -->
+    <div class="modal-overlay" id="diankvModal">
+        <div class="modal-content">
+            <div class="modal-handle"></div>
+            <div class="modal-title" id="modalTitle">物料名称</div>
+            <div class="modal-subtitle" id="modalSubtitle">物料代码 · 单位</div>
+
+            <div class="modal-fields">
+                <div class="modal-field">
+                    <div class="modal-field-label">结存</div>
+                    <div class="modal-field-value" id="modalJiecun">0</div>
+                </div>
+                <div class="modal-field">
+                    <div class="modal-field-label">差异</div>
+                    <div class="modal-field-value" id="modalDiff">—</div>
+                </div>
+            </div>
+
+            <div class="modal-input-group">
+                <label class="form-label">输入点库数量</label>
+                <input type="number" id="modalDiankvInput" placeholder="0" step="any"
+                       inputmode="decimal" autocomplete="off">
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveDiankv()">💾 保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 页面3：报表 ==================== -->
+    <div class="page-section" id="page-report">
+        <div class="container">
+            <div style="padding-top: 24px;">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📊 差异分析 & 报表生成</div>
+                        <button class="btn btn-primary" onclick="generateReports()">🚀 生成报表</button>
+                    </div>
+
+                    <div id="reportResult">
+                        <div class="empty-state">
+                            <div class="empty-icon">📊</div>
+                            <div class="empty-title">尚未生成报表</div>
+                            <div class="empty-desc">上传 Excel 并完成点库后，点击"生成报表"</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 报表汇总 -->
+                <div id="reportSummary" style="display:none;">
+                    <div class="stats-grid" id="reportStats"></div>
+
+                    <!-- 下载按钮 -->
+                    <div class="card" style="text-align: center;">
+                        <button class="btn btn-success btn-lg" onclick="downloadAllReports()">
+                            📥 一键下载所有报表
+                        </button>
+                    </div>
+
+                    <!-- 各报表预览 -->
+                    <div id="reportPreviews"></div>
+
+                    <!-- 询问清单 -->
+                    <div class="card" id="inquiryCard" style="display: none;">
+                        <div class="card-header">
+                            <div class="card-title">⚠️ 询问清单（需手工处理）</div>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>物料代码</th>
+                                        <th>物料名称</th>
+                                        <th>结存</th>
+                                        <th>点库</th>
+                                        <th>差异</th>
+                                        <th>原因</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inquiryBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 无规则物料 -->
+                    <div class="card" id="noRuleCard" style="display: none;">
+                        <div class="card-header">
+                            <div class="card-title">🔴 无规则物料（需新建规则）</div>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>物料代码</th>
+                                        <th>物料名称</th>
+                                        <th>单位</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="noRuleBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 页面4：规则管理 ==================== -->
+    <div class="page-section" id="page-rules">
+        <div class="container">
+            <div style="padding-top: 24px;">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">⚙️ 物料处理规则</div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-sm btn-secondary" onclick="importRulesFromExcel()">📤 从Excel导入</button>
+                            <button class="btn btn-sm btn-primary" onclick="openRuleDialog()">➕ 新建规则</button>
+                        </div>
+                    </div>
+
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="ruleSearchInput" placeholder="搜索物料规则...">
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>物料代码</th>
+                                    <th>物料名称</th>
+                                    <th>单位</th>
+                                    <th>属性</th>
+                                    <th>干料</th>
+                                    <th>湿料</th>
+                                    <th>熟食</th>
+                                    <th>咸菜</th>
+                                    <th>豆油</th>
+                                    <th>员工餐</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rulesBody">
+                                <tr>
+                                    <td colspan="11" style="text-align:center; color: var(--text-muted); padding: 40px;">
+                                        暂无规则数据
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 规则编辑弹窗 -->
+    <div class="dialog-overlay" id="ruleDialog">
+        <div class="dialog-content">
+            <h3 style="margin-bottom: 20px;" id="ruleDialogTitle">新建规则</h3>
+            <form id="ruleForm">
+                <div class="form-group">
+                    <label class="form-label">物料代码</label>
+                    <input class="form-input" id="ruleCode" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">物料名称</label>
+                    <input class="form-input" id="ruleName" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">单位</label>
+                        <input class="form-input" id="ruleUnit" placeholder="斤/袋/瓶...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">属性</label>
+                        <select class="form-select" id="ruleAttribute">
+                            <option value="正常">正常</option>
+                            <option value="不动">不动</option>
+                            <option value="询问">询问</option>
+                        </select>
+                    </div>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+                    档口系数（0-1，合计应等于1，留空表示不分配）
+                </p>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                    <div class="form-group">
+                        <label class="form-label">干料</label>
+                        <input class="form-input" id="ruleGanlia" type="number" step="0.01" min="0" max="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">湿料</label>
+                        <input class="form-input" id="ruleShiliao" type="number" step="0.01" min="0" max="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">熟食</label>
+                        <input class="form-input" id="ruleShushi" type="number" step="0.01" min="0" max="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">咸菜</label>
+                        <input class="form-input" id="ruleXiancai" type="number" step="0.01" min="0" max="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">豆油</label>
+                        <input class="form-input" id="ruleDouyou" type="number" step="0.01" min="0" max="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">员工餐</label>
+                        <input class="form-input" id="ruleYuangongcan" type="number" step="0.01" min="0" max="1">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" style="flex:1;" onclick="closeRuleDialog()">取消</button>
+                    <button type="submit" class="btn btn-primary" style="flex:1;">💾 保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 规则Excel导入（隐藏的文件输入） -->
+    <input type="file" id="ruleFileInput" accept=".xlsx,.xls" style="display:none">
+
+    <!-- 外部库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+
+    <!-- 应用脚本 -->
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/excel.js"></script>
+    <script src="js/rules.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
