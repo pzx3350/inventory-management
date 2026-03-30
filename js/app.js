@@ -1147,7 +1147,7 @@ window._toggleTheme = function() {
         document.getElementById('sidebar').classList.add('collapsed');
     }
     const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'light') {
-        document.documentElement.classList.remove('dark');
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
     }
 })();
