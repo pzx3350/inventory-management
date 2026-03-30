@@ -38,6 +38,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 加载规则
     await loadRules();
+
+    // 手机端默认进点库页
+    if (window.innerWidth <= 768) {
+        switchPage('diankv');
+        // 稍后 focus 搜索框
+        setTimeout(() => {
+            const s = document.getElementById('searchInput');
+            if (s) s.focus();
+        }, 400);
+    }
 });
 
 // ---- 页面导航 ----
@@ -474,6 +484,9 @@ async function saveDiankv() {
         renderDiankvList(inventoryCache);
         closeModal();
         showToast('保存成功', 'success');
+        // 保存后搜索框获焦，准备下一条
+        const search = document.getElementById('searchInput');
+        if (search) { search.value = ''; search.focus(); }
     } else {
         showToast('保存失败，请重试', 'error');
     }

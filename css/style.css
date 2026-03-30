@@ -500,12 +500,12 @@ tbody tr:hover { background: var(--bg-hover); }
 
 .search-box input {
     width: 100%;
-    padding: 10px 14px 10px 40px;
+    padding: 12px 14px 12px 40px;
     background: var(--bg-input);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
-    font-size: 13px;
+    font-size: 16px;
     font-family: inherit;
     transition: border-color var(--transition);
 }
@@ -813,6 +813,11 @@ tbody tr:hover { background: var(--bg-hover); }
     }
 
     .mobile-nav-item.active { color: var(--sidebar-text); }
+
+    /* 手机端只保留点库导航 */
+    .mobile-nav-item[data-page="upload"],
+    .mobile-nav-item[data-page="report"],
+    .mobile-nav-item[data-page="rules"] { display: none; }
 
     /* 主内容区底部留出导航栏高度 */
     .content-shell {
