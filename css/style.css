@@ -569,24 +569,6 @@ tbody tr:hover { background: var(--bg-hover); }
 .material-group-header:hover { background: var(--bg-hover); }
 .material-group-header .count { font-size: 12px; color: var(--text-muted); font-weight: 400; }
 
-.group-check {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 13px;
-    color: var(--text-primary);
-    cursor: pointer;
-    padding: 4px 10px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border);
-    user-select: none;
-}
-.group-check:has(input:checked) {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-}
-
 .material-item {
     display: flex;
     align-items: center;
