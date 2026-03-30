@@ -117,7 +117,10 @@
                 <!-- 进度 -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <span class="card-subtitle" id="diankvProgress">已录入 0 / 0</span>
-                    <span class="badge badge-info" id="diankvFilter" style="cursor:pointer;" onclick="toggleDiankvFilter()">全部</span>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span class="badge badge-info" id="diankvFilter" style="cursor:pointer;" onclick="toggleDiankvFilter()">全部</span>
+                        <button class="btn btn-sm btn-danger" onclick="clearAllDiankv()">一键清空</button>
+                    </div>
                 </div>
                 <div class="progress-bar" style="margin-bottom: 16px;">
                     <div class="progress-bar-fill" id="diankvProgressFill" style="width: 0%"></div>

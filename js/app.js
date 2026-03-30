@@ -358,6 +358,20 @@ function toggleGroup(header) {
     header.querySelector('span:first-child').textContent = (isOpen ? '▸ ' : '▾ ') + header.querySelector('span:first-child').textContent.slice(2);
 }
 
+async function clearAllDiankv() {
+    if (!currentPeriod || !inventoryCache || inventoryCache.length === 0) return;
+    if (!confirm('确定清空本期所有点库记录？')) return;
+    const codes = inventoryCache.map(i => i.material_code);
+    const { error } = await supabaseClient
+        .from('inventory')
+        .update({ diankv: null, updated_at: new Date().toISOString() })
+        .eq('period', currentPeriod)
+        .in('material_code', codes);
+    if (error) { showToast('清空失败，请重试', 'error'); return; }
+    showToast('已清空本期所有点库记录', 'success');
+    await loadDiankvList();
+}
+
 function toggleDiankvFilter() {
     const btn = document.getElementById('diankvFilter');
     if (diankvFilterMode === 'all') {
