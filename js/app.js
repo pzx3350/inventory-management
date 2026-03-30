@@ -473,6 +473,115 @@ function setupSearch() {
     });
 }
 
+// ---- 产品入库单辅助函数 ----
+
+// 期间末日：'2026.3' → '2026/03/31'
+function getPeriodLastDay(period) {
+    const [y, m] = period.split('.').map(Number);
+    const lastDay = new Date(y, m, 0).getDate(); // m不减1，Date自动溢出到上月末
+    return `${y}/${String(m).padStart(2,'0')}/${String(lastDay).padStart(2,'0')}`;
+}
+
+// 收货仓库
+function getWarehouse(code) {
+    if (code.startsWith('01.') || code.startsWith('02.')) return '原材料仓';
+    if (code.startsWith('03.')) return '产成品仓';
+    if (code.startsWith('04.')) return '库存商品仓';
+    return '';
+}
+
+// 档口 → 交货单位
+const VENDOR_MAP = {
+    ganlia: '干料车间',
+    shiliao: '湿料车间',
+    shushi: '熟食车间',
+    xiancai: '咸菜车间',
+    douyou: '豆油混合',
+    yuangongcan: '员工餐车间'
+};
+
+// CIN编号递增：'CIN008044' + 1 → 'CIN008045'
+function incrementCin(cin, n) {
+    const num = parseInt(cin.replace(/^CIN0*/,''), 10) + n;
+    return 'CIN' + String(num).padStart(6, '0');
+}
+
+// 构建产品入库单行数据
+function buildRukkuRows(reports, period, startCin) {
+    const date = getPeriodLastDay(period);
+    const rows = [];
+    let groupIndex = 0;
+
+    for (const cat of CATEGORIES) {
+        const items = reports[`${CATEGORY_NAMES[cat]}入库单`];
+        if (!items || items.length === 0) continue;
+        const cin = incrementCin(startCin, groupIndex);
+        const vendor = VENDOR_MAP[cat] || CATEGORY_NAMES[cat];
+        for (const item of items) {
+            rows.push({
+                日期: date,
+                交货单位: vendor,
+                编号: cin,
+                验收: '李磊',
+                保管: '李磊',
+                物料编码: item.material_code,
+                单位: item.unit === '斤' ? 'kg' : item.unit,
+                实收数量: item.value,
+                收货仓库: getWarehouse(item.material_code),
+                仓位: ''
+            });
+        }
+        groupIndex++;
+    }
+    return rows;
+}
+
+// 渲染产品入库单 HTML 表格
+function renderRukkuTable() {
+    if (!reportCache) return;
+    const startCin = document.getElementById('cinInput').value.trim() || 'CIN000000';
+    const rows = buildRukkuRows(reportCache.reports, currentPeriod, startCin);
+
+    if (rows.length === 0) {
+        document.getElementById('rukkuTableWrap').innerHTML = '<div class="empty-state"><div class="empty-title">无入库数据</div></div>';
+        return;
+    }
+
+    let html = `<table><thead><tr>
+        <th>日期</th><th>交货单位</th><th>编号</th><th>验收</th><th>保管</th>
+        <th>物料编码</th><th>单位</th><th>实收数量</th><th>收货仓库</th><th>仓位</th>
+    </tr></thead><tbody>`;
+
+    rows.forEach(r => {
+        html += `<tr>
+            <td>${r.日期}</td>
+            <td>${r.交货单位}</td>
+            <td>${r.编号}</td>
+            <td>${r.验收}</td>
+            <td>${r.保管}</td>
+            <td>${r.物料编码}</td>
+            <td>${r.单位}</td>
+            <td>${r.实收数量}</td>
+            <td>${r.收货仓库}</td>
+            <td>${r.仓位}</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('rukkuTableWrap').innerHTML = html;
+}
+
+function downloadRukkuReport() {
+    if (!reportCache) return;
+    const startCin = document.getElementById('cinInput').value.trim() || 'CIN000000';
+    const rows = buildRukkuRows(reportCache.reports, currentPeriod, startCin);
+    if (rows.length === 0) { showToast('无入库数据', 'error'); return; }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '产品入库单');
+    XLSX.writeFile(wb, `${currentPeriod}_产品入库单.xlsx`);
+    showToast('下载完成！', 'success');
+}
+
 // ---- 报表生成 ----
 async function generateReports() {
     if (!currentPeriod) {
@@ -588,6 +697,10 @@ async function generateReports() {
     } else {
         document.getElementById('noRuleCard').style.display = 'none';
     }
+
+    // 渲染产品入库单
+    document.getElementById('rukkuCard').style.display = 'block';
+    renderRukkuTable();
 
     document.getElementById('reportSummary').style.display = 'block';
     showToast('报表生成完成！', 'success');

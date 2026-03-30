@@ -163,6 +163,21 @@
 
                     <div id="reportPreviews"></div>
 
+                    <!-- 产品入库单 -->
+                    <div class="card" id="rukkuCard" style="display:none;">
+                        <div class="card-header">
+                            <div class="card-title">📦 产品入库单</div>
+                            <button class="btn btn-sm btn-primary" onclick="downloadRukkuReport()">📥 下载 Excel</button>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px; padding: 0 0 12px 0;">
+                            <label style="font-size:13px; color:var(--text-secondary); white-space:nowrap;">起始编号</label>
+                            <input id="cinInput" type="text" class="input" placeholder="CIN000000"
+                                style="width:140px; font-family:monospace;"
+                                oninput="renderRukkuTable()">
+                        </div>
+                        <div class="table-container" id="rukkuTableWrap"></div>
+                    </div>
+
                     <!-- 询问清单 -->
                     <div class="card" id="inquiryCard" style="display: none;">
                         <div class="card-header">

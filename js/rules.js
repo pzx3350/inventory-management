@@ -223,7 +223,9 @@ function processInventory(inventoryData, rulesData) {
                     }
                     const divider = unit === '斤' ? 2 : 1;
                     reports[`${CATEGORY_NAMES[category]}入库单`].push({
+                        material_code: code,
                         material_name: name,
+                        unit,
                         value: pendingData / divider
                     });
                 } else {
@@ -293,7 +295,9 @@ function processInventory(inventoryData, rulesData) {
             const finalValue = pendingData / divider;
 
             reports[`${CATEGORY_NAMES[category]}入库单`].push({
+                material_code: code,
                 material_name: name,
+                unit,
                 value: finalValue
             });
 
