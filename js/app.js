@@ -484,9 +484,15 @@ async function saveDiankv() {
         renderDiankvList(inventoryCache);
         closeModal();
         showToast('保存成功', 'success');
-        // 保存后搜索框获焦，准备下一条
-        const search = document.getElementById('searchInput');
-        if (search) { search.value = ''; search.focus(); }
+        // 保存后搜索框清空并聚焦
+        setTimeout(() => {
+            const search = document.getElementById('searchInput');
+            if (search) {
+                search.value = '';
+                search.dispatchEvent(new Event('input'));
+                search.focus();
+            }
+        }, 50);
     } else {
         showToast('保存失败，请重试', 'error');
     }
