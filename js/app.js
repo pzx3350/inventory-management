@@ -327,7 +327,10 @@ function renderDiankvList(data) {
         html += `
             <div class="material-group-header" onclick="toggleGroup(this)">
                 <span>▾ ${groupName}</span>
-                <span class="count">${doneCount}/${items.length}</span>
+                <div style="display:flex;align-items:center;gap:8px;" onclick="event.stopPropagation()">
+                    <span class="count">${doneCount}/${items.length}</span>
+                    <button class="btn btn-sm btn-danger" onclick="clearGroupDiankv('${groupName}')">清空</button>
+                </div>
             </div>
             <div class="group-items">
         `;
@@ -349,6 +352,22 @@ function renderDiankvList(data) {
     });
 
     container.innerHTML = html;
+}
+
+async function clearGroupDiankv(groupName) {
+    if (!currentPeriod || !inventoryCache) return;
+    if (!confirm(`确定清空「${groupName}」的全部点库记录？`)) return;
+    const codes = inventoryCache
+        .filter(i => getMaterialGroup(i.material_code) === groupName)
+        .map(i => i.material_code);
+    if (codes.length === 0) return;
+    const ok = await clearDiankvByCodes(currentPeriod, codes);
+    if (ok) {
+        showToast(`「${groupName}」点库已清空`, 'success');
+        await loadDiankvList();
+    } else {
+        showToast('清空失败，请重试', 'error');
+    }
 }
 
 function toggleGroup(header) {
@@ -737,7 +756,16 @@ async function generateReports() {
         return;
     }
 
-    // 获取最新数据
+    // 获取本次选中的分组
+    const checkedGroups = GROUP_ORDER.filter(g =>
+        document.getElementById(`reportGroup_${g}`)?.checked
+    );
+    if (checkedGroups.length === 0) {
+        showToast('请至少勾选一个点库分组', 'error');
+        return;
+    }
+
+    // 获取最新数据，过滤只保留勾选分组
     const data = await getInventory(currentPeriod);
     inventoryCache = data;
 
@@ -746,11 +774,13 @@ async function generateReports() {
         return;
     }
 
+    const filteredData = data.filter(i => checkedGroups.includes(getMaterialGroup(i.material_code)));
+
     // 获取规则
     const rules = await getRules();
 
     // 运行规则引擎
-    const result = processInventory(data, rules);
+    const result = processInventory(filteredData, rules);
     reportCache = result;
 
     // 显示汇总

@@ -117,6 +117,19 @@ async function updateDiankv(period, materialCode, diankvValue) {
 }
 
 /**
+ * 批量清空指定物料代码的点库值
+ */
+async function clearDiankvByCodes(period, materialCodes) {
+    const { error } = await supabaseClient
+        .from('inventory')
+        .update({ diankv: null, updated_at: new Date().toISOString() })
+        .eq('period', period)
+        .in('material_code', materialCodes);
+    if (error) { console.error('清空点库失败:', error); return false; }
+    return true;
+}
+
+/**
  * 获取所有规则
  * @returns {Array}
  */
