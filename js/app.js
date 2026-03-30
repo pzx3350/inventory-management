@@ -644,12 +644,59 @@ function renderLiaoliaoTable() {
     document.getElementById('liaoliaoTableWrap').innerHTML = html;
 }
 
-// 将期间末日转为 Excel 日期序号（与样本文件一致）
+// 将期间末日转为 Excel 日期序号
 function getPeriodLastDateSerial(period) {
     const [y, m] = period.split('.').map(Number);
     const d = new Date(y, m - 1, new Date(y, m, 0).getDate());
-    // Excel日期序号：距1899-12-30的天数
     return Math.floor((d - new Date(1899, 11, 30)) / 86400000);
+}
+
+// 通用：拉取模板 → 清空数据行 → 填入新数据 → 下载
+async function exportFromTemplate(templatePath, sheetName, dataRows, filename) {
+    let templateBuf;
+    try {
+        const resp = await fetch(templatePath);
+        if (!resp.ok) throw new Error('模板文件加载失败');
+        templateBuf = await resp.arrayBuffer();
+    } catch (e) {
+        showToast('模板加载失败：' + e.message, 'error');
+        return;
+    }
+
+    const wb = XLSX.read(new Uint8Array(templateBuf), { type: 'array', cellStyles: true });
+    const ws = wb.Sheets[sheetName];
+    if (!ws) { showToast('模板Sheet不存在', 'error'); return; }
+
+    // 清除第2行起的所有数据（保留第1行表头）
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let r = 1; r <= range.e.r; r++) {
+        for (let c = range.s.c; c <= range.e.c; c++) {
+            const addr = XLSX.utils.encode_cell({ r, c });
+            delete ws[addr];
+        }
+    }
+
+    // 写入新数据行
+    const dateSerial = getPeriodLastDateSerial(currentPeriod);
+    dataRows.forEach((row, ri) => {
+        row.forEach((val, ci) => {
+            const addr = XLSX.utils.encode_cell({ r: ri + 1, c: ci });
+            const cell = { v: val };
+            if (ci === 0) { cell.t = 'n'; cell.z = 'yyyy/mm/dd'; }
+            else if (typeof val === 'number') { cell.t = 'n'; }
+            else { cell.t = 's'; }
+            ws[addr] = cell;
+        });
+    });
+
+    // 更新 range
+    ws['!ref'] = XLSX.utils.encode_range({
+        s: { r: 0, c: 0 },
+        e: { r: dataRows.length, c: range.e.c }
+    });
+
+    XLSX.writeFile(wb, filename, { bookType: 'xls' });
+    showToast('下载完成！', 'success');
 }
 
 function downloadLiaoliaoReport() {
@@ -657,30 +704,13 @@ function downloadLiaoliaoReport() {
     const startSout = document.getElementById('soutInput').value.trim() || 'SOUT000000';
     const rows = buildLiaoliaoRows(reportCache.reports, currentPeriod, startSout);
     if (rows.length === 0) { showToast('无领料数据', 'error'); return; }
-    const dateSerial = getPeriodLastDateSerial(currentPeriod);
-    const excelRows = rows.map(r => ({
-        '日期': dateSerial,
-        '领料部门': r.领料部门,
-        '编    号': r.编号,
-        '领料': r.领料,
-        '发料': r.发料,
-        '领料类型': r.领料类型,
-        '物料代码': r.物料代码,
-        '是否返工': r.是否返工,
-        '单位': r.单位.toUpperCase(),
-        '实发数量': r.实发数量,
-        '发料仓库': r.发料仓库,
-        '仓位': r.仓位
-    }));
-    const ws = XLSX.utils.json_to_sheet(excelRows);
-    // 设置日期列格式
-    for (let i = 2; i <= excelRows.length + 1; i++) {
-        if (ws['A' + i]) { ws['A' + i].t = 'n'; ws['A' + i].z = 'yyyy/mm/dd'; }
-    }
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '生产领料单');
-    XLSX.writeFile(wb, `${currentPeriod}_生产领料单.xls`, { bookType: 'xls' });
-    showToast('下载完成！', 'success');
+    const ds = getPeriodLastDateSerial(currentPeriod);
+    const dataRows = rows.map(r => [
+        ds, r.领料部门, r.编号, r.领料, r.发料,
+        r.领料类型, r.物料代码, r.是否返工,
+        r.单位.toUpperCase(), r.实发数量, r.发料仓库, r.仓位
+    ]);
+    exportFromTemplate('templates/生产领料单.xls', '生产领料单', dataRows, `${currentPeriod}_生产领料单.xls`);
 }
 
 function downloadRukkuReport() {
@@ -688,27 +718,12 @@ function downloadRukkuReport() {
     const startCin = document.getElementById('cinInput').value.trim() || 'CIN000000';
     const rows = buildRukkuRows(reportCache.reports, currentPeriod, startCin);
     if (rows.length === 0) { showToast('无入库数据', 'error'); return; }
-    const dateSerial = getPeriodLastDateSerial(currentPeriod);
-    const excelRows = rows.map(r => ({
-        '日期': dateSerial,
-        '交货单位': r.交货单位,
-        '编    号': r.编号,
-        '验收': r.验收,
-        '保管': r.保管,
-        '物料编码': r.物料编码,
-        '单位': r.单位.toUpperCase(),
-        '实收数量': r.实收数量,
-        '收货仓库': r.收货仓库,
-        '仓位': r.仓位
-    }));
-    const ws = XLSX.utils.json_to_sheet(excelRows);
-    for (let i = 2; i <= excelRows.length + 1; i++) {
-        if (ws['A' + i]) { ws['A' + i].t = 'n'; ws['A' + i].z = 'yyyy/mm/dd'; }
-    }
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '产品入库');
-    XLSX.writeFile(wb, `${currentPeriod}_产品入库单.xls`, { bookType: 'xls' });
-    showToast('下载完成！', 'success');
+    const ds = getPeriodLastDateSerial(currentPeriod);
+    const dataRows = rows.map(r => [
+        ds, r.交货单位, r.编号, r.验收, r.保管,
+        r.物料编码, r.单位.toUpperCase(), r.实收数量, r.收货仓库, r.仓位
+    ]);
+    exportFromTemplate('templates/产品入库.xls', '产品入库', dataRows, `${currentPeriod}_产品入库单.xls`);
 }
 
 // ---- 报表生成 ----
