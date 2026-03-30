@@ -720,38 +720,6 @@ async function generateReports() {
         </div>
     `;
 
-    // 渲染各报表预览
-    const previewsDiv = document.getElementById('reportPreviews');
-    let previewHtml = '';
-
-    for (const [name, items] of Object.entries(result.reports)) {
-        if (items.length === 0) continue;
-
-        previewHtml += `
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">📄 ${name}</div>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                        <span class="badge badge-success">${items.length} 条</span>
-                        <button class="btn btn-sm btn-secondary" onclick="downloadSingleReport('${name}')">📥 下载</button>
-                    </div>
-                </div>
-                <div class="table-container" style="max-height: 300px; overflow-y: auto;">
-                    <table>
-                        <thead>
-                            <tr><th>物料名称</th><th>数量</th></tr>
-                        </thead>
-                        <tbody>
-                            ${items.map(i => `<tr><td>${i.material_name}</td><td>${i.value}</td></tr>`).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-    }
-
-    previewsDiv.innerHTML = previewHtml;
-
     // 渲染询问清单
     if (result.inquiries.length > 0) {
         document.getElementById('inquiryCard').style.display = 'block';
