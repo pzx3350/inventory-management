@@ -361,13 +361,18 @@ function toggleGroup(header) {
 async function clearAllDiankv() {
     if (!currentPeriod || !inventoryCache || inventoryCache.length === 0) return;
     if (!confirm('确定清空本期所有点库记录？')) return;
+    // 分批处理，每批50条，避免URL过长
     const codes = inventoryCache.map(i => i.material_code);
-    const { error } = await supabaseClient
-        .from('inventory')
-        .update({ diankv: null, updated_at: new Date().toISOString() })
-        .eq('period', currentPeriod)
-        .in('material_code', codes);
-    if (error) { showToast('清空失败，请重试', 'error'); return; }
+    const batchSize = 50;
+    for (let i = 0; i < codes.length; i += batchSize) {
+        const batch = codes.slice(i, i + batchSize);
+        const { error } = await supabaseClient
+            .from('inventory')
+            .update({ diankv: null, updated_at: new Date().toISOString() })
+            .eq('period', currentPeriod)
+            .in('material_code', batch);
+        if (error) { showToast('清空失败，请重试', 'error'); return; }
+    }
     showToast('已清空本期所有点库记录', 'success');
     await loadDiankvList();
 }
