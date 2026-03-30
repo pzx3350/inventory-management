@@ -92,10 +92,16 @@ function processInventory(inventoryData, rulesData) {
     const noRule = [];     // 无规则物料
     const skipped = [];    // 跳过的物料
 
+    const SUMMARY_RE = /合计|小计|总计|汇总/;
+
     for (const item of inventoryData) {
         const code = item.material_code;
         const name = item.material_name;
         const unit = item.unit;
+
+        // 跳过汇总行
+        if (SUMMARY_RE.test(code) || SUMMARY_RE.test(name)) continue;
+
         const jiecun = item.jiecun ?? 0;
         // 点库未录入 → 视为 0
         const diankv = item.diankv ?? 0;
