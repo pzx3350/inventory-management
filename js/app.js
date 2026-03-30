@@ -42,9 +42,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 手机端默认进点库页
     if (window.innerWidth <= 768) {
         switchPage('diankv');
-        // 稍后 focus 搜索框
         setTimeout(() => {
-            const s = document.getElementById('searchInput');
+            const s = document.getElementById('searchInputMobile');
             if (s) s.focus();
         }, 400);
     }
@@ -487,23 +486,39 @@ async function saveDiankv() {
         // 保存后搜索框清空并聚焦
         setTimeout(() => {
             const search = document.getElementById('searchInput');
-            if (search) {
-                search.value = '';
-                search.dispatchEvent(new Event('input'));
-                search.focus();
-            }
+            const searchMobile = document.getElementById('searchInputMobile');
+            if (search) { search.value = ''; search.dispatchEvent(new Event('input')); }
+            if (searchMobile) { searchMobile.value = ''; searchMobile.focus(); }
+            else if (search) { search.focus(); }
         }, 50);
     } else {
         showToast('保存失败，请重试', 'error');
     }
 }
 
+// 获取当前生效的搜索框（手机用底部，桌面用顶部）
+function getSearchInput() {
+    const mobile = document.getElementById('searchInputMobile');
+    if (mobile && window.getComputedStyle(mobile).display !== 'none') return mobile;
+    return document.getElementById('searchInput');
+}
+
 // ---- 搜索功能 ----
 function setupSearch() {
-    // 点库搜索
+    // 桌面搜索框
     document.getElementById('searchInput').addEventListener('input', () => {
         renderDiankvList(inventoryCache);
     });
+
+    // 手机底部搜索框
+    const mobileInput = document.getElementById('searchInputMobile');
+    if (mobileInput) {
+        mobileInput.addEventListener('input', () => {
+            // 同步到顶部搜索框（renderDiankvList 读取顶部）
+            document.getElementById('searchInput').value = mobileInput.value;
+            renderDiankvList(inventoryCache);
+        });
+    }
 
     // 规则搜索
     document.getElementById('ruleSearchInput').addEventListener('input', () => {

@@ -771,57 +771,30 @@ tbody tr:hover { background: var(--bg-hover); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* ---- 底部导航栏（手机端） ---- */
-.mobile-nav { display: none; }
+/* ---- 底部搜索栏（手机端） ---- */
+.mobile-search-bar { display: none; }
 
 @media (max-width: 768px) {
-    /* 隐藏侧边栏，改用底部导航 */
+    /* 隐藏侧边栏 */
     .sidebar { display: none; }
 
-    /* 显示底部导航 */
-    .mobile-nav {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
+    /* 手机端点库页内搜索框隐藏（改用底部搜索栏） */
+    #page-diankv .search-box { display: none; }
+
+    /* 底部搜索栏 */
+    .mobile-search-bar {
+        display: block;
         position: fixed;
         bottom: 0; left: 0; right: 0;
-        background: var(--sidebar-bg);
-        border-top: 1px solid var(--sidebar-border);
+        background: var(--bg-card);
+        border-top: 1px solid var(--border);
+        padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
         z-index: 200;
-        padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    .mobile-nav-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-        padding: 10px 4px 8px;
-        color: var(--sidebar-muted);
-        font-size: 11px;
-        font-weight: 500;
-        background: none;
-        border: none;
-        cursor: pointer;
-        transition: color var(--transition);
-        font-family: inherit;
-    }
-
-    .mobile-nav-item svg {
-        width: 22px; height: 22px;
-        stroke: currentColor; fill: none;
-        stroke-width: 1.85; stroke-linecap: round; stroke-linejoin: round;
-    }
-
-    .mobile-nav-item.active { color: var(--sidebar-text); }
-
-    /* 手机端只保留点库导航 */
-    .mobile-nav-item[data-page="upload"],
-    .mobile-nav-item[data-page="report"],
-    .mobile-nav-item[data-page="rules"] { display: none; }
-
-    /* 主内容区底部留出导航栏高度 */
+    /* 主内容区底部留出搜索栏高度 */
     .content-shell {
-        padding: 16px 16px calc(64px + env(safe-area-inset-bottom, 0px));
+        padding: 16px 16px calc(72px + env(safe-area-inset-bottom, 0px));
     }
 
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
