@@ -699,15 +699,6 @@ async function exportFromTemplate(templatePath, sheetName, dataRows, filename) {
     showToast('下载完成！', 'success');
 }
 
-function triggerTemplateDownload(filename) {
-    const a = document.createElement('a');
-    a.href = `templates/${filename}`;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-}
-
 function copyLiaoliaoData() {
     if (!reportCache) return;
     const startSout = document.getElementById('soutInput').value.trim() || 'SOUT000000';
@@ -720,8 +711,7 @@ function copyLiaoliaoData() {
         r.单位.toUpperCase(), r.实发数量, r.发料仓库, r.仓位
     ].join('\t')).join('\n');
     navigator.clipboard.writeText(tsv).then(() => {
-        triggerTemplateDownload('生产领料单.xls');
-        showToast('数据已复制，模板已下载！选中 A2 单元格后粘贴→只保留值', 'success');
+        showToast('已复制！请在生产领料单.xls 中选中 A2 单元格，粘贴→只保留值', 'success');
     }).catch(() => showToast('复制失败，请检查浏览器权限', 'error'));
 }
 
@@ -736,8 +726,7 @@ function copyRukkuData() {
         r.物料编码, r.单位.toUpperCase(), r.实收数量, r.收货仓库, r.仓位
     ].join('\t')).join('\n');
     navigator.clipboard.writeText(tsv).then(() => {
-        triggerTemplateDownload('产品入库.xls');
-        showToast('数据已复制，模板已下载！选中 A2 单元格后粘贴→只保留值', 'success');
+        showToast('已复制！请在产品入库.xls 中选中 A2 单元格，粘贴→只保留值', 'success');
     }).catch(() => showToast('复制失败，请检查浏览器权限', 'error'));
 }
 
