@@ -699,31 +699,35 @@ async function exportFromTemplate(templatePath, sheetName, dataRows, filename) {
     showToast('下载完成！', 'success');
 }
 
-function downloadLiaoliaoReport() {
+function copyLiaoliaoData() {
     if (!reportCache) return;
     const startSout = document.getElementById('soutInput').value.trim() || 'SOUT000000';
     const rows = buildLiaoliaoRows(reportCache.reports, currentPeriod, startSout);
     if (rows.length === 0) { showToast('无领料数据', 'error'); return; }
-    const ds = getPeriodLastDateSerial(currentPeriod);
-    const dataRows = rows.map(r => [
-        ds, r.领料部门, r.编号, r.领料, r.发料,
+    const date = getPeriodLastDay(currentPeriod);
+    const tsv = rows.map(r => [
+        date, r.领料部门, r.编号, r.领料, r.发料,
         r.领料类型, r.物料代码, r.是否返工,
         r.单位.toUpperCase(), r.实发数量, r.发料仓库, r.仓位
-    ]);
-    exportFromTemplate('templates/生产领料单.xls', '生产领料单', dataRows, `${currentPeriod}_生产领料单.xls`);
+    ].join('\t')).join('\n');
+    navigator.clipboard.writeText(tsv).then(() => {
+        showToast('已复制！请在生产领料单.xls 中选中 A2 单元格，粘贴→只保留值', 'success');
+    }).catch(() => showToast('复制失败，请检查浏览器权限', 'error'));
 }
 
-function downloadRukkuReport() {
+function copyRukkuData() {
     if (!reportCache) return;
     const startCin = document.getElementById('cinInput').value.trim() || 'CIN000000';
     const rows = buildRukkuRows(reportCache.reports, currentPeriod, startCin);
     if (rows.length === 0) { showToast('无入库数据', 'error'); return; }
-    const ds = getPeriodLastDateSerial(currentPeriod);
-    const dataRows = rows.map(r => [
-        ds, r.交货单位, r.编号, r.验收, r.保管,
+    const date = getPeriodLastDay(currentPeriod);
+    const tsv = rows.map(r => [
+        date, r.交货单位, r.编号, r.验收, r.保管,
         r.物料编码, r.单位.toUpperCase(), r.实收数量, r.收货仓库, r.仓位
-    ]);
-    exportFromTemplate('templates/产品入库.xls', '产品入库', dataRows, `${currentPeriod}_产品入库单.xls`);
+    ].join('\t')).join('\n');
+    navigator.clipboard.writeText(tsv).then(() => {
+        showToast('已复制！请在产品入库.xls 中选中 A2 单元格，粘贴→只保留值', 'success');
+    }).catch(() => showToast('复制失败，请检查浏览器权限', 'error'));
 }
 
 // ---- 报表生成 ----
