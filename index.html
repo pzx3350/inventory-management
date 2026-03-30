@@ -178,6 +178,21 @@
                         <div class="table-container" id="rukkuTableWrap"></div>
                     </div>
 
+                    <!-- 生产领料单 -->
+                    <div class="card" id="liaoliaoCard" style="display:none;">
+                        <div class="card-header">
+                            <div class="card-title">📋 生产领料单</div>
+                            <button class="btn btn-sm btn-primary" onclick="downloadLiaoliaoReport()">📥 下载 Excel</button>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:10px; padding: 0 0 12px 0;">
+                            <label style="font-size:13px; color:var(--text-secondary); white-space:nowrap;">起始编号</label>
+                            <input id="soutInput" type="text" class="input" placeholder="SOUT000000"
+                                style="width:160px; font-family:monospace;"
+                                oninput="renderLiaoliaoTable()">
+                        </div>
+                        <div class="table-container" id="liaoliaoTableWrap"></div>
+                    </div>
+
                     <!-- 询问清单 -->
                     <div class="card" id="inquiryCard" style="display: none;">
                         <div class="card-header">

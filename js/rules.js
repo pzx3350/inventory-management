@@ -194,7 +194,9 @@ function processInventory(inventoryData, rulesData) {
 
                 if (finalValue !== 0) {
                     reports[`${CATEGORY_NAMES[key]}领料单`].push({
+                        material_code: code,
                         material_name: name,
+                        unit,
                         value: finalValue
                     });
                 }
@@ -262,7 +264,9 @@ function processInventory(inventoryData, rulesData) {
                         const finalValue = value / divider;
                         if (finalValue !== 0) {
                             reports[`${CATEGORY_NAMES[key]}领料单`].push({
+                                material_code: code,
                                 material_name: name,
+                                unit,
                                 value: finalValue
                             });
                         }

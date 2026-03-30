@@ -570,6 +570,92 @@ function renderRukkuTable() {
     document.getElementById('rukkuTableWrap').innerHTML = html;
 }
 
+// ---- 生产领料单辅助函数 ----
+
+// SOUT编号递增
+function incrementSout(sout, n) {
+    const num = parseInt(sout.replace(/^SOUT0*/,''), 10) + n;
+    return 'SOUT' + String(num).padStart(6, '0');
+}
+
+function buildLiaoliaoRows(reports, period, startSout) {
+    const date = getPeriodLastDay(period);
+    const rows = [];
+    let groupIndex = 0;
+
+    for (const cat of CATEGORIES) {
+        const items = reports[`${CATEGORY_NAMES[cat]}领料单`];
+        if (!items || items.length === 0) continue;
+        const sout = incrementSout(startSout, groupIndex);
+        const dept = VENDOR_MAP[cat] || CATEGORY_NAMES[cat];
+        for (const item of items) {
+            rows.push({
+                日期: date,
+                领料部门: dept,
+                编号: sout,
+                领料: '李磊',
+                发料: '李磊',
+                领料类型: '一般领料',
+                物料代码: item.material_code,
+                是否返工: '否',
+                单位: item.unit === '斤' ? 'kg' : item.unit,
+                实发数量: item.value,
+                发料仓库: getWarehouse(item.material_code),
+                仓位: ''
+            });
+        }
+        groupIndex++;
+    }
+    return rows;
+}
+
+function renderLiaoliaoTable() {
+    if (!reportCache) return;
+    const startSout = document.getElementById('soutInput').value.trim() || 'SOUT000000';
+    const rows = buildLiaoliaoRows(reportCache.reports, currentPeriod, startSout);
+
+    if (rows.length === 0) {
+        document.getElementById('liaoliaoTableWrap').innerHTML = '<div class="empty-state"><div class="empty-title">无领料数据</div></div>';
+        return;
+    }
+
+    let html = `<table><thead><tr>
+        <th>日期</th><th>领料部门</th><th>编号</th><th>领料</th><th>发料</th>
+        <th>领料类型</th><th>物料代码</th><th>是否返工</th><th>单位</th><th>实发数量</th><th>发料仓库</th><th>仓位</th>
+    </tr></thead><tbody>`;
+
+    rows.forEach(r => {
+        html += `<tr>
+            <td>${r.日期}</td>
+            <td>${r.领料部门}</td>
+            <td>${r.编号}</td>
+            <td>${r.领料}</td>
+            <td>${r.发料}</td>
+            <td>${r.领料类型}</td>
+            <td>${r.物料代码}</td>
+            <td>${r.是否返工}</td>
+            <td>${r.单位}</td>
+            <td>${r.实发数量}</td>
+            <td>${r.发料仓库}</td>
+            <td>${r.仓位}</td>
+        </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('liaoliaoTableWrap').innerHTML = html;
+}
+
+function downloadLiaoliaoReport() {
+    if (!reportCache) return;
+    const startSout = document.getElementById('soutInput').value.trim() || 'SOUT000000';
+    const rows = buildLiaoliaoRows(reportCache.reports, currentPeriod, startSout);
+    if (rows.length === 0) { showToast('无领料数据', 'error'); return; }
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '生产领料单');
+    XLSX.writeFile(wb, `${currentPeriod}_生产领料单.xlsx`);
+    showToast('下载完成！', 'success');
+}
+
 function downloadRukkuReport() {
     if (!reportCache) return;
     const startCin = document.getElementById('cinInput').value.trim() || 'CIN000000';
@@ -701,6 +787,10 @@ async function generateReports() {
     // 渲染产品入库单
     document.getElementById('rukkuCard').style.display = 'block';
     renderRukkuTable();
+
+    // 渲染生产领料单
+    document.getElementById('liaoliaoCard').style.display = 'block';
+    renderLiaoliaoTable();
 
     document.getElementById('reportSummary').style.display = 'block';
     showToast('报表生成完成！', 'success');
