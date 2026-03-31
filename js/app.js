@@ -792,7 +792,7 @@ const VENDOR_MAP = {
     shushi: '熟食车间',
     xiancai: '咸菜车间',
     douyou: '豆油混合',
-    yuangongcan: '员工餐车间'
+    yuangongcan: '销售部-员工餐'
 };
 
 // CIN编号递增：'CIN008044' + 1 → 'CIN008045'
