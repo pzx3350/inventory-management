@@ -720,17 +720,19 @@ async function saveDiankv() {
         if (idx !== -1) {
             inventoryCache[idx].diankv = diankvValue;
         }
+        
+        // 保存当前的滚动值
+        const currentScroll = window.scrollY || document.documentElement.scrollTop;
+
         renderDiankvList(inventoryCache);
+        
+        // 渲染完毕后立即恢复滚动值避免跳动
+        window.scrollTo(0, currentScroll);
+
         closeModal();
         showToast('保存成功', 'success');
-        // 保存后搜索框清空并聚焦
-        setTimeout(() => {
-            const search = document.getElementById('searchInput');
-            const searchMobile = document.getElementById('searchInputMobile');
-            if (search) { search.value = ''; search.dispatchEvent(new Event('input')); }
-            if (searchMobile) { searchMobile.value = ''; searchMobile.focus(); }
-            else if (search) { search.focus(); }
-        }, 50);
+        
+        // 手机端保存后不再强制自动聚焦搜索框，以免强行唤起键盘而导致界面挤压、折叠状态视觉错乱
     } else {
         showToast('保存失败，请重试', 'error');
     }
