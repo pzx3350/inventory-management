@@ -334,12 +334,13 @@ function renderDiankvList(data) {
         const items = groups[groupName];
         if (items.length === 0) return;
         const doneCount = items.filter(i => i.diankv !== null && i.diankv !== undefined).length;
+        const isCollapsed = collapsedMobileGroups.has(groupName);
         html += `
             <div class="material-group-header" data-group="${groupName}" onclick="toggleGroup(this)">
-                <span>▾ ${groupName}</span>
+                <span>${isCollapsed ? '▸' : '▾'} ${groupName}</span>
                 <span class="count">${doneCount}/${items.length}</span>
             </div>
-            <div class="group-items">
+            <div class="group-items" style="${isCollapsed ? 'display:none' : ''}">
         `;
         items.forEach(item => {
             const hasDiankv = item.diankv !== null && item.diankv !== undefined;
@@ -359,16 +360,6 @@ function renderDiankvList(data) {
     });
 
     container.innerHTML = html;
-
-    // 恢复折叠状态
-    collapsedMobileGroups.forEach(gName => {
-        const header = container.querySelector(`.material-group-header[data-group="${gName}"]`);
-        if (!header) return;
-        const groupItems = header.nextElementSibling;
-        if (groupItems) groupItems.style.display = 'none';
-        const span = header.querySelector('span:first-child');
-        if (span) span.textContent = '▸ ' + gName;
-    });
 
     // 同步渲染桌面表格
     renderDiankvTable(data);
