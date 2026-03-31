@@ -9,6 +9,7 @@ let rulesCache = [];
 let reportCache = null;
 let diankvFilterMode = 'all'; // 'all' | 'empty' | 'done'
 let currentEditItem = null;
+const collapsedMobileGroups = new Set(); // 记录手机端已折叠的分组名
 
 // ---- 初始化 ----
 document.addEventListener('DOMContentLoaded', async () => {
@@ -334,7 +335,7 @@ function renderDiankvList(data) {
         if (items.length === 0) return;
         const doneCount = items.filter(i => i.diankv !== null && i.diankv !== undefined).length;
         html += `
-            <div class="material-group-header" onclick="toggleGroup(this)">
+            <div class="material-group-header" data-group="${groupName}" onclick="toggleGroup(this)">
                 <span>▾ ${groupName}</span>
                 <span class="count">${doneCount}/${items.length}</span>
             </div>
@@ -358,6 +359,16 @@ function renderDiankvList(data) {
     });
 
     container.innerHTML = html;
+
+    // 恢复折叠状态
+    collapsedMobileGroups.forEach(gName => {
+        const header = container.querySelector(`.material-group-header[data-group="${gName}"]`);
+        if (!header) return;
+        const groupItems = header.nextElementSibling;
+        if (groupItems) groupItems.style.display = 'none';
+        const span = header.querySelector('span:first-child');
+        if (span) span.textContent = '▸ ' + gName;
+    });
 
     // 同步渲染桌面表格
     renderDiankvTable(data);
@@ -442,9 +453,9 @@ function renderDiankvTable(data) {
         items.forEach((item, idx) => {
             const hasDiankv = item.diankv !== null && item.diankv !== undefined;
             const jiecun = item.jiecun ?? 0;
-            // 点库未输入视为 0 计算差异
+            // 点库未输入视为 0 计算差异，parseFloat+toFixed 消除浮点误差
             const diankvVal = hasDiankv ? item.diankv : 0;
-            const diff = diankvVal - jiecun;
+            const diff = parseFloat((diankvVal - jiecun).toFixed(4));
             const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
             const diffClass = diff !== 0 ? (diff > 0 ? 'diff-positive' : 'diff-negative') : '';
 
@@ -498,7 +509,7 @@ function startInlineEdit(cell) {
             diffCell.textContent = '—';
             diffCell.className = 'col-right';
         } else {
-            const diff = val - jiecun;
+            const diff = parseFloat((val - jiecun).toFixed(4));
             diffCell.textContent = diff > 0 ? `+${diff}` : `${diff}`;
             diffCell.className = 'col-right ' + (diff > 0 ? 'diff-positive' : diff < 0 ? 'diff-negative' : '');
         }
@@ -596,10 +607,13 @@ function toggleDesktopGroup(gid) {
 }
 
 function toggleGroup(header) {
+    const groupName = header.dataset.group;
     const items = header.nextElementSibling;
     const isOpen = items.style.display !== 'none';
     items.style.display = isOpen ? 'none' : 'block';
-    header.querySelector('span:first-child').textContent = (isOpen ? '▸ ' : '▾ ') + header.querySelector('span:first-child').textContent.slice(2);
+    header.querySelector('span:first-child').textContent = (isOpen ? '▸ ' : '▾ ') + groupName;
+    if (isOpen) collapsedMobileGroups.add(groupName);
+    else collapsedMobileGroups.delete(groupName);
 }
 
 async function clearAllDiankv() {
