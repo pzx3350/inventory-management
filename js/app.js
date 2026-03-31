@@ -716,23 +716,60 @@ async function saveDiankv() {
 
     if (success) {
         // 更新缓存
-        const idx = inventoryCache.findIndex(i => i.material_code === currentEditItem.material_code);
+        const code = currentEditItem.material_code;
+        const idx = inventoryCache.findIndex(i => i.material_code === code);
         if (idx !== -1) {
             inventoryCache[idx].diankv = diankvValue;
         }
-        
-        // 保存当前的滚动值
-        const currentScroll = window.scrollY || document.documentElement.scrollTop;
 
-        renderDiankvList(inventoryCache);
-        
-        // 渲染完毕后立即恢复滚动值避免跳动
-        window.scrollTo(0, currentScroll);
+        // ---- 精准更新手机端卡片（避免全量重渲染导致折叠状态丢失/滚动跳顶） ----
+        const hasDiankv = diankvValue !== null && diankvValue !== undefined;
+        // 找到对应的卡片并更新显示
+        document.querySelectorAll('.material-item').forEach(el => {
+            if (el.getAttribute('onclick') === `openDiankvModal('${code}')`) {
+                const diankvEl = el.querySelector('.material-diankv');
+                if (diankvEl) {
+                    diankvEl.className = `material-diankv ${hasDiankv ? 'recorded' : 'empty'}`;
+                    diankvEl.textContent = hasDiankv ? diankvValue : '未录入';
+                }
+            }
+        });
+
+        // 更新分组 header 的已完成计数
+        document.querySelectorAll('.material-group-header').forEach(header => {
+            const groupName = header.dataset.group;
+            const groupItems = header.nextElementSibling;
+            if (!groupItems) return;
+            const cards = groupItems.querySelectorAll('.material-item');
+            let doneCount = 0;
+            cards.forEach(card => {
+                const dv = card.querySelector('.material-diankv');
+                if (dv && dv.classList.contains('recorded')) doneCount++;
+            });
+            const countEl = header.querySelector('.count');
+            if (countEl) countEl.textContent = `${doneCount}/${cards.length}`;
+        });
+
+        // 更新顶部进度条
+        const total = inventoryCache.length;
+        const recorded = inventoryCache.filter(d => d.diankv !== null && d.diankv !== undefined).length;
+        const progress = total > 0 ? Math.round(recorded / total * 100) : 0;
+        document.getElementById('diankvProgress').textContent = `已录入 ${recorded} / ${total}`;
+        document.getElementById('diankvProgressFill').style.width = `${progress}%`;
+
+        // 同步更新桌面端表格（桌面端没有折叠问题）
+        renderDiankvTable(inventoryCache);
 
         closeModal();
         showToast('保存成功', 'success');
-        
-        // 手机端保存后不再强制自动聚焦搜索框，以免强行唤起键盘而导致界面挤压、折叠状态视觉错乱
+        // 保存后搜索框清空并聚焦（不触发 dispatchEvent 避免全量重渲染）
+        setTimeout(() => {
+            const search = document.getElementById('searchInput');
+            const searchMobile = document.getElementById('searchInputMobile');
+            if (search) search.value = '';
+            if (searchMobile) { searchMobile.value = ''; searchMobile.focus(); }
+            else if (search) { search.focus(); }
+        }, 50);
     } else {
         showToast('保存失败，请重试', 'error');
     }
@@ -792,7 +829,7 @@ const VENDOR_MAP = {
     shushi: '熟食车间',
     xiancai: '咸菜车间',
     douyou: '豆油混合',
-    yuangongcan: '销售部-员工餐'
+    yuangongcan: '员工餐车间'
 };
 
 // CIN编号递增：'CIN008044' + 1 → 'CIN008045'
