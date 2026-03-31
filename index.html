@@ -119,6 +119,7 @@
                     <span class="card-subtitle" id="diankvProgress">已录入 0 / 0</span>
                     <div style="display:flex;gap:8px;align-items:center;">
                         <span class="badge badge-info" id="diankvFilter" style="cursor:pointer;" onclick="toggleDiankvFilter()">全部</span>
+                        <button class="btn btn-sm desktop-only" onclick="exportDiankvExcel()">一键导出</button>
                         <button class="btn btn-sm btn-danger" onclick="clearAllDiankv()">一键清空</button>
                     </div>
                 </div>
@@ -126,7 +127,10 @@
                     <div class="progress-bar-fill" id="diankvProgressFill" style="width: 0%"></div>
                 </div>
 
-                <!-- 物料列表 -->
+                <!-- 桌面端表格（仅 >768px 显示） -->
+                <div id="diankvDesktopWrap" class="desktop-only"></div>
+
+                <!-- 物料列表（手机端卡片，仅 ≤768px 显示） -->
                 <div class="material-list" id="materialList">
                     <div class="empty-state">
                         <div class="empty-icon">📦</div>

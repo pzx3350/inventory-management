@@ -358,6 +358,241 @@ function renderDiankvList(data) {
     });
 
     container.innerHTML = html;
+
+    // 同步渲染桌面表格
+    renderDiankvTable(data);
+}
+
+// ---- 桌面端点库表格 ----
+function renderDiankvTable(data) {
+    const container = document.getElementById('diankvDesktopWrap');
+    if (!container) return;
+
+    if (!data || data.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📦</div>
+                <div class="empty-title">暂无数据</div>
+                <div class="empty-desc">请先在电脑端上传 Excel 文件</div>
+            </div>`;
+        return;
+    }
+
+    // 应用同 renderDiankvList 相同的过滤逻辑
+    let filtered = data;
+    if (diankvFilterMode === 'empty') {
+        filtered = data.filter(d => d.diankv === null || d.diankv === undefined);
+    } else if (diankvFilterMode === 'done') {
+        filtered = data.filter(d => d.diankv !== null && d.diankv !== undefined);
+    }
+
+    const searchTerm = document.getElementById('searchInput').value.trim();
+    if (searchTerm) {
+        filtered = filtered.filter(d =>
+            fuzzyMatch(d.material_name, searchTerm) ||
+            d.material_code.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }
+
+    // 按分组整理
+    const groups = {};
+    GROUP_ORDER.forEach(g => groups[g] = []);
+    filtered.forEach(item => {
+        const g = getMaterialGroup(item.material_code);
+        groups[g].push(item);
+    });
+
+    let html = `<table class="diankv-desktop-table">
+        <colgroup>
+            <col class="col-num">
+            <col class="col-name">
+            <col class="col-unit">
+            <col class="col-num2">
+            <col class="col-num2">
+            <col class="col-num2">
+        </colgroup>
+        <thead>
+            <tr>
+                <th style="text-align:center;">#</th>
+                <th>物料名称</th>
+                <th>计量单位</th>
+                <th style="text-align:right;">结存</th>
+                <th style="text-align:right;">点库</th>
+                <th style="text-align:right;">差异</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    let groupSeq = 0;
+    GROUP_ORDER.forEach(groupName => {
+        const items = groups[groupName];
+        if (items.length === 0) return;
+
+        const gid = `g${groupSeq++}`;
+        const doneCount = items.filter(i => i.diankv !== null && i.diankv !== undefined).length;
+
+        html += `<tr class="diankv-group-row" data-gid="${gid}" onclick="toggleDesktopGroup('${gid}')">
+            <td colspan="6">
+                <span class="group-toggle-icon">▾</span>
+                ${groupName}
+                <span class="group-count">${doneCount} / ${items.length}</span>
+            </td>
+        </tr>`;
+
+        items.forEach((item, idx) => {
+            const hasDiankv = item.diankv !== null && item.diankv !== undefined;
+            const jiecun = item.jiecun ?? 0;
+            // 点库未输入视为 0 计算差异
+            const diankvVal = hasDiankv ? item.diankv : 0;
+            const diff = diankvVal - jiecun;
+            const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+            const diffClass = diff !== 0 ? (diff > 0 ? 'diff-positive' : 'diff-negative') : '';
+
+            html += `<tr class="diankv-data-row" data-gmember="${gid}">
+                <td class="col-num">${idx + 1}</td>
+                <td class="cell-name" title="${item.material_name}">${item.material_name}</td>
+                <td>${item.unit}</td>
+                <td class="col-right">${jiecun}</td>
+                <td class="diankv-cell ${hasDiankv ? 'has-value' : ''}"
+                    data-code="${item.material_code}"
+                    data-jiecun="${jiecun}"
+                    onclick="startInlineEdit(this)">
+                    ${hasDiankv ? item.diankv : '<span class="placeholder">点击输入</span>'}
+                </td>
+                <td class="col-right ${diffClass}">${diffStr}</td>
+            </tr>`;
+        });
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+// ---- 桌面端内联编辑 ----
+function startInlineEdit(cell) {
+    if (cell.querySelector('input')) return; // 已在编辑中
+
+    const code = cell.dataset.code;
+    const jiecun = parseFloat(cell.dataset.jiecun) || 0;
+    const item = inventoryCache.find(i => i.material_code === code);
+    const currentVal = (item && item.diankv !== null && item.diankv !== undefined) ? item.diankv : '';
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = 'any';
+    input.value = currentVal;
+    input.className = 'inline-edit-input';
+    input.onclick = e => e.stopPropagation();
+
+    cell.innerHTML = '';
+    cell.appendChild(input);
+    input.focus();
+    input.select();
+
+    // 实时更新差异列
+    input.addEventListener('input', () => {
+        const val = parseFloat(input.value);
+        const diffCell = cell.parentElement.querySelector('td:last-child');
+        if (!diffCell) return;
+        if (isNaN(val)) {
+            diffCell.textContent = '—';
+            diffCell.className = 'col-right';
+        } else {
+            const diff = val - jiecun;
+            diffCell.textContent = diff > 0 ? `+${diff}` : `${diff}`;
+            diffCell.className = 'col-right ' + (diff > 0 ? 'diff-positive' : diff < 0 ? 'diff-negative' : '');
+        }
+    });
+
+    let saved = false;
+
+    async function save() {
+        if (saved) return;
+        saved = true;
+
+        const val = input.value.trim();
+        let diankvValue = null;
+        if (val !== '') {
+            diankvValue = parseFloat(val);
+            if (isNaN(diankvValue)) {
+                saved = false;
+                input.focus();
+                return;
+            }
+        }
+
+        const success = await updateDiankv(currentPeriod, code, diankvValue);
+        if (success) {
+            const idx = inventoryCache.findIndex(i => i.material_code === code);
+            if (idx !== -1) inventoryCache[idx].diankv = diankvValue;
+            // 只刷新表格，不重渲移动端列表（避免滚动位置跳动）
+            renderDiankvTable(inventoryCache);
+            // 更新顶部进度
+            const total = inventoryCache.length;
+            const recorded = inventoryCache.filter(d => d.diankv !== null && d.diankv !== undefined).length;
+            const progress = total > 0 ? Math.round(recorded / total * 100) : 0;
+            document.getElementById('diankvProgress').textContent = `已录入 ${recorded} / ${total}`;
+            document.getElementById('diankvProgressFill').style.width = `${progress}%`;
+        } else {
+            showToast('保存失败，请重试', 'error');
+            saved = false;
+            renderDiankvTable(inventoryCache);
+        }
+    }
+
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') {
+            saved = true; // 阻止 blur 触发保存
+            renderDiankvTable(inventoryCache);
+        }
+    });
+}
+
+// ---- 一键导出点库数据 ----
+function exportDiankvExcel() {
+    if (!inventoryCache || inventoryCache.length === 0) {
+        showToast('暂无数据可导出', 'error');
+        return;
+    }
+
+    const wsData = [['物料代码', '物料名称', '计量单位', '结存', '点库', '差异']];
+
+    inventoryCache.forEach(item => {
+        const hasDiankv = item.diankv !== null && item.diankv !== undefined;
+        const diff = hasDiankv ? (item.diankv - (item.jiecun ?? 0)) : '';
+        wsData.push([
+            item.material_code,
+            item.material_name,
+            item.unit,
+            item.jiecun ?? 0,
+            hasDiankv ? item.diankv : '',
+            diff
+        ]);
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [
+        { wch: 20 }, { wch: 30 }, { wch: 10 },
+        { wch: 12 }, { wch: 12 }, { wch: 12 }
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, '点库数据');
+    XLSX.writeFile(wb, `${currentPeriod || '点库'}_点库数据.xlsx`);
+    showToast('导出成功！', 'success');
+}
+
+// ---- 桌面端分组折叠 ----
+function toggleDesktopGroup(gid) {
+    const rows = document.querySelectorAll(`tr[data-gmember="${gid}"]`);
+    const header = document.querySelector(`tr[data-gid="${gid}"]`);
+    const icon = header ? header.querySelector('.group-toggle-icon') : null;
+    if (!rows.length) return;
+
+    const isOpen = rows[0].style.display !== 'none';
+    rows.forEach(r => { r.style.display = isOpen ? 'none' : ''; });
+    if (icon) icon.textContent = isOpen ? '▸' : '▾';
 }
 
 function toggleGroup(header) {

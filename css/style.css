@@ -774,7 +774,163 @@ tbody tr:hover { background: var(--bg-hover); }
 /* ---- 底部搜索栏（手机端） ---- */
 .mobile-search-bar { display: none; }
 
+/* ---- 桌面端点库表格 ---- */
+.desktop-only { display: block; }
+
+#diankvDesktopWrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 20px;
+    max-width: 900px;
+}
+
+.diankv-desktop-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.diankv-desktop-table thead th {
+    background: var(--thead-bg);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 11px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* 列宽定义（table-layout:fixed 生效） */
+.diankv-desktop-table col.col-num  { width: 48px; }
+.diankv-desktop-table col.col-name { /* 剩余空间 */ }
+.diankv-desktop-table col.col-unit { width: 80px; }
+.diankv-desktop-table col.col-num2 { width: 100px; }
+
+/* 物料名称单元格超长截断 */
+.diankv-desktop-table td.cell-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 0; /* 配合 table-layout:fixed 触发 ellipsis */
+}
+
+.diankv-desktop-table tbody tr.diankv-group-row {
+    background: var(--bg-secondary);
+}
+
+.diankv-desktop-table tbody tr.diankv-group-row td {
+    padding: 7px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+}
+
+.diankv-desktop-table tbody tr.diankv-group-row:hover td {
+    background: var(--border);
+}
+
+.group-toggle-icon {
+    display: inline-block;
+    width: 14px;
+    font-style: normal;
+    margin-right: 4px;
+    transition: transform 0.15s ease;
+}
+
+.group-count {
+    margin-left: 8px;
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 11px;
+    letter-spacing: 0;
+}
+
+.diankv-desktop-table tbody tr.diankv-data-row {
+    border-bottom: 1px solid var(--border);
+    transition: background var(--transition);
+}
+
+.diankv-desktop-table tbody tr.diankv-data-row:last-child {
+    border-bottom: none;
+}
+
+.diankv-desktop-table tbody tr.diankv-data-row:hover {
+    background: var(--bg-hover);
+}
+
+.diankv-desktop-table tbody td {
+    padding: 11px 16px;
+    font-size: 13.5px;
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+.diankv-desktop-table tbody td.col-num {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.diankv-desktop-table tbody td.col-right {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 点库单元格 */
+.diankv-cell {
+    cursor: pointer;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    position: relative;
+    min-width: 110px;
+}
+
+.diankv-cell .placeholder {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.diankv-cell.has-value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.diankv-cell:hover .placeholder {
+    color: var(--info);
+}
+
+/* 内联编辑输入框 */
+.inline-edit-input {
+    width: 100%;
+    text-align: right;
+    padding: 4px 8px;
+    border: 1.5px solid var(--border-focus);
+    border-radius: 6px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+}
+
+/* 差异列颜色 */
+.diff-positive { color: var(--success); font-weight: 500; }
+.diff-negative { color: var(--danger);  font-weight: 500; }
+
 @media (max-width: 768px) {
+    /* 桌面专属元素全部隐藏 */
+    .desktop-only { display: none !important; }
+
     /* 隐藏侧边栏 */
     .sidebar { display: none; }
 
